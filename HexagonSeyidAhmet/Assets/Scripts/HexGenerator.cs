@@ -24,21 +24,37 @@ public class HexGenerator : MonoBehaviour
     Vector3 a = Vector3.zero;
     GameObject[,] hexagons; //stores the data for all hex game objects 
     float clicktime = 0;
-    float clickDelayTime = 0.5f;
+    float clickDelayTime = 0.1f;
     List<Collider2D> sellectedHexColliders;
     ContactFilter2D aaa;
+    private Dictionary<int, Vector2> aliveli; //!daha sona için!
     Vector2 sellectedCorner1 = new Vector3(-0.5f, -0.25f); // hex 1.corner position from hex center
     Vector2 sellectedCorner2 = new Vector3(0, -0.5f); // hex 2.corner position from hex center
     Vector2 sellectedCorner3 = new Vector3(0.5f, -0.25f); // hex 3.corner position from hex center
     Vector2 sellectedCorner4 = new Vector3(0.5f, 0.25f); // hex 4.corner position from hex center
     Vector2 sellectedCorner5 = new Vector3(0, 0.5f); // hex 5.corner position from hex center
     Vector2 sellectedCorner6 = new Vector3(-0.5f, 0.25f); // hex 6.corner position from hex center
+    public Transform hexagonLightBorder;
+    Collider2D[] bbbOld;
+    Collider2D[] bbbNew =null;
+
 
 
     void Start()
     {
         hexagons = new GameObject[gridSizeX, gridSizeY];
+
         #region not used
+
+        //aliveli = new Dictionary<int, Vector2>();
+        //aliveli.Add(1, sellectedCorner1);
+        //aliveli.Add(2, sellectedCorner2);
+        //aliveli.Add(3, sellectedCorner3);
+        //aliveli.Add(4, sellectedCorner4);
+        //aliveli.Add(5, sellectedCorner5);
+        //aliveli.Add(6, sellectedCorner6);
+
+
         //// gridBrushBase =  component<GridBrushBase>();
         //// gridBrushBase.BoxFill(gridLayout, brushTarget, position);
         ////grid = GetComponent<Grid>();
@@ -94,23 +110,23 @@ public class HexGenerator : MonoBehaviour
                 //(i+4).corner is sellected
                 switch (i + 4)
                 {
-                    case 4:
-                        Selected(sellectedCorner4);
-                        break;
-                    case 5:
-                        Selected(sellectedCorner5);
-                        break;
-                    case 6:
-                        Selected(sellectedCorner6);
-                        break;
                     case 1:
-                        Selected(sellectedCorner1);
+                        Selected(sellectedCorner1, 1);
                         break;
                     case 2:
-                        Selected(sellectedCorner2);
+                        Selected(sellectedCorner2, 2);
                         break;
                     case 3:
-                        Selected(sellectedCorner3);
+                        Selected(sellectedCorner3, 3);
+                        break;
+                    case 4:
+                        Selected(sellectedCorner4, 4);
+                        break;
+                    case 5:
+                        Selected(sellectedCorner5, 5);
+                        break;
+                    case 6:
+                        Selected(sellectedCorner6, 6);
                         break;
 
                     default:
@@ -123,20 +139,31 @@ public class HexGenerator : MonoBehaviour
         // Debug.Log(hexagonTileMap.CellToWorld(tileMapCordinate));
     }
 
-    private void Selected(Vector2 corner)
+    private void Selected(Vector2 corner, int cornerNum)
     {
-        if (Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0) && clicktime<Time.time)
         {
+            clicktime = Time.time + clickDelayTime;
             /*racyast */
-            Collider2D[] bbb = Physics2D.OverlapCircleAll(corner + (Vector2)touchedCellsCenterPositionWorld, 0.2499f);
-            if (bbb.Length >= 3)       //gives limit for selection (if it is not border)
+            bbbNew = Physics2D.OverlapCircleAll(corner + (Vector2)touchedCellsCenterPositionWorld, 0.2499f);
+            if (bbbNew.Length >= 3)       //gives limit for selection (if it is not border)
             {
-                foreach (Collider2D bb in bbb)
-                {
-                    bb.transform.localScale = new Vector3(1.2f, 1.2f, 1);
-                }
-            }
 
+                if (bbbOld != null)
+                {
+                    foreach (var bbOld in bbbOld)
+                    {
+                        bbOld.transform.localScale = new Vector3(1, 1, 1);
+                    }
+                }
+                bbbOld = bbbNew;
+                foreach (Collider2D bbNew in bbbNew)
+                {
+                    bbNew.transform.localScale = new Vector3(1.2f, 1.2f, 1);
+                }
+                /*Light effcect */
+                hexagonLightBorder.SetPositionAndRotation(corner + (Vector2)touchedCellsCenterPositionWorld, Quaternion.Euler(0, 0, 180 * cornerNum)); // //if corner number is odd ,then rotate
+            }
         }
     }
 }
