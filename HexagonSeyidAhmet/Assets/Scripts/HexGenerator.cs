@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -40,6 +41,10 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private Vector3Int[] sellectedCellPositions = new Vector3Int[3];
     private Vector3Int[] tempSameColorCellPositions = new Vector3Int[3];
     private List<Vector3Int> sameColorCellPositions = new List<Vector3Int>();
+    public Text scoreText;
+    Collider2D[] sameColorHexagons = new Collider2D[12];
+    List<Collider2D> sameColorHexagons2 = new List<Collider2D>();
+    int score = 0;
     void Start()
     {
         #region dictionary not used yet
@@ -83,7 +88,6 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     {
         Rotate();
     }
-
 
     void Rotate()
     {
@@ -143,11 +147,13 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             }
         }
     }
+
     IEnumerator Wait()
     {
         yield return new WaitForSeconds(0.1f);
         LookIfThreeSameColor(sellectedCellPositions);//look if there are 3 or more same color
     }
+
     void GenerateMap()
     {
         for (int x = 0; x < gridSizeX; x++)
@@ -197,8 +203,6 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         else
             return sellectedCellPositionsOld;
     }
-    Collider2D[] sameColorHexagons = new Collider2D[12];
-    List<Collider2D> sameColorHexagons2 = new List<Collider2D>();
 
     private void LookIfThreeSameColor(Vector3Int[] sellectedCellPositions)
     {
@@ -234,8 +238,10 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
                         #endregion 
 
                         /*destroy same colors*/
+                         score += (sameColorCellPositions.Count * 5);
                         for (int t = 0; t < sameColorCellPositions.Count; t++)
                         {
+                            scoreText.text = score.ToString();
                             Destroy(hexagons[sameColorCellPositions[t].x, sameColorCellPositions[t].y]);
                         }  // Destroy objects
 
