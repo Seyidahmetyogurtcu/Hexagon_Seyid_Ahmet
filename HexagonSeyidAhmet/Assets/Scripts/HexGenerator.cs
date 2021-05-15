@@ -17,7 +17,7 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     Vector3 touchPositionVector = Vector3.zero;
     GameObject[,] hexagons; //stores the data for all hex game objects 
     float clicktime = 0;
-    float clickDelayTime = 0.3f;
+    float clickDelayTime = 0.1f;
     List<Collider2D> sellectedHexColliders;
     //private Dictionary<int, Vector2> aliveli; //!daha sona için!
     Vector2[] sellectedCorners = new[] { new Vector2(-0.5f, -0.25f), new Vector2(0, -0.5f), new Vector2(0.5f, -0.25f), new Vector2(0.5f, 0.25f), new Vector2(0, 0.5f), new Vector2(-0.5f, 0.25f) };//hex 1-6.corner position from hex center
@@ -35,7 +35,11 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private Vector2 hexRotationVectorEnd;
     private float hexRotationEndAngle;
     private bool isRotate = false;
-
+    private Vector3Int[] sellectedCellPositionsNew = new Vector3Int[3];
+    private Vector3Int[] sellectedCellPositionsOld = new Vector3Int[3];
+    private Vector3Int[] sellectedCellPositions = new Vector3Int[3];
+    private Vector3Int[] tempSameColorCellPositions = new Vector3Int[3];
+    private List<Vector3Int> sameColorCellPositions = new List<Vector3Int>();
     void Start()
     {
         #region dictionary not used yet
@@ -49,18 +53,6 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         #endregion
         hexagons = new GameObject[gridSizeX, gridSizeY];
         GenerateMap(); //this generates hexagons with tilemap
-    }
-    void GenerateMap()
-    {
-        for (int x = 0; x < gridSizeX; x++)
-        {
-            for (int y = 0; y < gridSizeY; y++)
-            {
-                hexagons[x, y] = Instantiate(brushTarget, hexagonTileMap.CellToWorld(new Vector3Int(x, y, 0)), Quaternion.identity, this.transform);
-                hexagons[x, y].name = "Hexagon " + "X_" + x + " Y_" + y;
-                hexagons[x, y].GetComponent<SpriteRenderer>().color = colors[UnityEngine.Random.Range(0, 5)];
-            }
-        }
     }
 
     void FixedUpdate()
@@ -82,17 +74,17 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         {
             if (theta >= 60 * i && theta < 60 * (i + 1) && !isDraging && !isRotate)
             {
-                sellectedHexagons = Selected(sellectedCorners[i + 3], i + 4);//i.corner is sellected,1. is left-bottom corner
+                sellectedCellPositions = Selected(sellectedCorners[i + 3], i + 4);//i.corner is sellected,1. is left-bottom corner
             }
         }
     }
-
-
 
     void Update()
     {
         Rotate();
     }
+
+
     void Rotate()
     {
         if (isDraging && !isRotate)
@@ -107,88 +99,162 @@ public class HexGenerator : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             hexRotationAngle = hexRotationEndAngle - hexRotationStartAngle;
             if (hexRotationAngle > 0 && hexRotationAngle <= 180)
             {
-                for (int i = 0; i < 3; i++) //  do this 3 time
+                for (int i = 0; i < 1; i++) //  do this 3 time
                 {     //rotate one time
-                    Debug.LogError("hexRotationAngle reverse : " + hexRotationAngle);
+                    Debug.LogWarning("hexRotationAngle reverse : " + hexRotationAngle);
+                    Vector3 tempRe0 = hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].transform.position;//this is the one of the three sellected hexes tilemap cell possition
+                    Vector3 tempRe1 = hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].transform.position;//this is the one of the three sellected hexes tilemap cell possition
+                    Vector3 tempRe2 = hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].transform.position;//this is the one of the three sellected hexes tilemap cell possition
 
-                    Vector3 temp = sellectedHexagons[0].transform.position;
-                    Vector3.Slerp(sellectedHexagons[0].transform.position, sellectedHexagons[1].transform.position,   Time.deltaTime);
-                    Vector3.Slerp(sellectedHexagons[1].transform.position, sellectedHexagons[2].transform.position,   Time.deltaTime);
-                    Vector3.Slerp(sellectedHexagons[2].transform.position, temp, 5 * Time.deltaTime);
-                    //sellectedHexagons[0].transform.position = sellectedHexagons[1].transform.position;
-                   // sellectedHexagons[1].transform.position = sellectedHexagons[2].transform.position;
-                   // sellectedHexagons[2].transform.position = temp;
+                    GameObject tempReGo = hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].gameObject;
+                    hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y] = hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].gameObject;
+                    hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y] = hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].gameObject;
+                    hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y] = tempReGo;
 
-                    LookIfThreeSameColor(sellectedHexagons); //look if there are 3 or more same color
+                    hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].transform.position = tempRe0;
+                    hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].transform.position = tempRe1;
+                    hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].transform.position = tempRe2;
+
+                    StartCoroutine(Wait());
                 }
             }
             if (hexRotationAngle < 0 && hexRotationAngle > -180)
             {
-                for (int i = 0; i < 3; i++) //  do this 3 time
+                for (int i = 0; i < 1; i++) //  do this 3 time
                 {
-                    Debug.LogError("hexRotationAngle clockwise : " + hexRotationAngle);
                     //rotate one time
-                    Vector3 temp = sellectedHexagons[0].transform.position;
-                    sellectedHexagons[0].transform.position = sellectedHexagons[2].transform.position;
-                    sellectedHexagons[2].transform.position = sellectedHexagons[1].transform.position;
-                    sellectedHexagons[1].transform.position = temp;
+                    Debug.LogWarning("hexRotationAngle ClockWise : " + hexRotationAngle);
+                    //First I keep first hex array's positoin and gameobject in temp.
+                    //Then I change position of hexagons and game object of hex array to turn hexagons.
+                    Vector3 tempCw0 = hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].transform.position;
+                    Vector3 tempCw1 = hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].transform.position;//this is the one of the three sellected hexes tilemap cell possition
+                    Vector3 tempCw2 = hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].transform.position;//this is the one of the three sellected hexes tilemap cell possition
 
-                    LookIfThreeSameColor(sellectedHexagons);//look if there are 3 or more same color
+                    GameObject tempCwGo = hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].gameObject;
+                    hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y] = hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].gameObject;
+                    hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y] = hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].gameObject;
+                    hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y] = tempCwGo;
+
+                    hexagons[sellectedCellPositions[0].x, sellectedCellPositions[0].y].transform.position = tempCw0;
+                    hexagons[sellectedCellPositions[1].x, sellectedCellPositions[1].y].transform.position = tempCw1;
+                    hexagons[sellectedCellPositions[2].x, sellectedCellPositions[2].y].transform.position = tempCw2;
+                    StartCoroutine(Wait());
                 }
             }
         }
     }
-
-    private Collider2D[] Selected(Vector2 corner, int cornerNum)
+    IEnumerator Wait()
     {
-        if (Input.GetMouseButtonUp(0) && !isDraging && clicktime < Time.fixedTime)
+        yield return new WaitForSeconds(0.1f);
+        LookIfThreeSameColor(sellectedCellPositions);//look if there are 3 or more same color
+    }
+    void GenerateMap()
+    {
+        for (int x = 0; x < gridSizeX; x++)
         {
-            clicktime = Time.time + clickDelayTime;
+            for (int y = 0; y < gridSizeY; y++)
+            {
+                hexagons[x, y] = Instantiate(brushTarget, hexagonTileMap.CellToWorld(new Vector3Int(x, y, 0)), Quaternion.identity, this.transform);
+                hexagons[x, y].name = "Hexagon " + "X_" + x + " Y_" + y;
+                hexagons[x, y].GetComponent<SpriteRenderer>().color = colors[UnityEngine.Random.Range(0, 5)];
+            }
+        }
+    }
+    private Vector3Int[] Selected(Vector2 corner, int cornerNum)
+    {
+        if (Input.GetMouseButtonUp(0) && !isDraging)
+        {
+
             /*racyast */
             sellectedNew = Physics2D.OverlapCircleAll(corner + (Vector2)touchedCellsCenterPositionWorld, 0.2499f);
-
+            Debug.Log(sellectedNew.Length);
             if (sellectedNew.Length >= 3)       //gives limit for selection (if it is not border)
             {
+                for (int i = 0; i < sellectedNew.Length; i++)
+                {
+                    sellectedCellPositionsNew[i] = hexagonTileMap.WorldToCell(sellectedNew[i].transform.position);
+                }
                 if (sellcetedOld != null)
                 {
-                    foreach (Collider2D bbOld in sellcetedOld)
-                    {
-                        bbOld.transform.localScale = new Vector3(1, 1, 1);
-                    }
+                    //   foreach (Collider2D bbOld in sellcetedOld)
+                    //   {
+                    //     bbOld.transform.localScale = new Vector3(1, 1, 1);
+                    //   }
                 }
                 sellcetedOld = sellectedNew;
-                foreach (Collider2D bbNew in sellectedNew)
-                {
-                    bbNew.transform.localScale = new Vector3(1.2f, 1.2f, 1);
-                }
+                sellectedCellPositionsOld = sellectedCellPositionsNew;
+                // foreach (Collider2D bbNew in sellectedNew)
+                //   {
+                //      bbNew.transform.localScale = new Vector3(1.2f, 1.2f, 1);
+                // }
                 /*Light effcect */
                 hexagonLightBorder.SetPositionAndRotation(corner + (Vector2)touchedCellsCenterPositionWorld, Quaternion.Euler(0, 0, 180 * cornerNum)); // //if corner number is odd ,then rotate
-                return sellectedNew;
+                return sellectedCellPositionsNew;
             }
             else
-                return sellcetedOld;
+                return sellectedCellPositionsOld;
         }
         else
-            return sellcetedOld;
+            return sellectedCellPositionsOld;
     }
+    Collider2D[] sameColorHexagons = new Collider2D[12];
+    List<Collider2D> sameColorHexagons2 = new List<Collider2D>();
 
-    private void LookIfThreeSameColor(Collider2D[] sellectedHexagons)
+    private void LookIfThreeSameColor(Vector3Int[] sellectedCellPositions)
     {
-        for (int x = 0; x < 3 + 1; x++)
+        for (int i = 0; i < 3; i++)   
         {
-            for (int corner = 0; corner < 6; corner++)
+            for (int corner = 0; corner < 6; corner++) 
             {
-                sellectedHexagons = Physics2D.OverlapCircleAll(sellectedCorners[corner] + (Vector2)sellectedHexagons[x].transform.position, 0.2499f);
+                sellectedHexagons = Physics2D.OverlapCircleAll(sellectedCorners[corner] + (Vector2)hexagonTileMap.CellToWorld(sellectedCellPositions[i]), 0.2499f); //for all 3 sellected hex's edges
                 if (sellectedHexagons.Length >= 3)  //in normal conditions
                 {
                     if (sellectedHexagons[0].GetComponent<SpriteRenderer>().color == sellectedHexagons[1].GetComponent<SpriteRenderer>().color && sellectedHexagons[0].GetComponent<SpriteRenderer>().color == sellectedHexagons[2].GetComponent<SpriteRenderer>().color)//gives limit for selection(if it is not border)
                     {
-                        sellectedHexagons[0].gameObject.SetActive(false);
-                        sellectedHexagons[1].gameObject.SetActive(false);
-                        sellectedHexagons[2].gameObject.SetActive(false);
-                    }
-                    else
-                    {
+                        #region comment this
+                        for (int j = 0; j < sellectedHexagons.Length; j++) // sellectedHexagons.Length=3
+                        {
+                            tempSameColorCellPositions[j] = hexagonTileMap.WorldToCell(sellectedHexagons[j].transform.position); // tileMap Cell Positions of 3 same color Hexagons
+                            if (!sameColorCellPositions.Contains(tempSameColorCellPositions[j]))
+                            {
+                                sameColorCellPositions.Add(tempSameColorCellPositions[j]);
+                            }
+                        }
+                        #endregion
+                        #region and use this instead,continue to find "index out of the array" error.
+                        //sameColorHexagons = Physics2D.OverlapCircleAll(sellectedCorners[corner] + (Vector2)hexagonTileMap.CellToWorld(sellectedCellPositions[i]), 1.1f); //for all 9 sellected hex's edges
+                        //for (int j = 0; j < 12; j++)  // sellectedHexagons.Length=9
+                        //{
+                        //    if (sameColorHexagons[j].GetComponent<SpriteRenderer>().color == sellectedHexagons[0].GetComponent<SpriteRenderer>().color)
+                        //    {
+                        //        sameColorHexagons2.Add(sameColorHexagons[j]);
+                        //        sameColorHexagons2.ForEach(c => sameColorCellPositions.Add(hexagonTileMap.WorldToCell(c.transform.position))); //c is each of the collider inside of the list. 
+                        //    }
+                        //} // look if 2. circle has same color
+                        #endregion 
+
+                        /*destroy same colors*/
+                        for (int t = 0; t < sameColorCellPositions.Count; t++)
+                        {
+                            Destroy(hexagons[sameColorCellPositions[t].x, sameColorCellPositions[t].y]);
+                        }  // Destroy objects
+
+                        /*----------------------------------------------------------------------*/
+                        /*shift left objects to right*/
+                        /*instantiate new hex from left*/
+                        /*----------------------------------------------------------------------*/
+                        sameColorCellPositions.Clear();
+                        sameColorHexagons2.Clear();
+                        sameColorHexagons[0] = null;
+                        sameColorHexagons[1] = null;
+                        sameColorHexagons[2] = null;
+                        sameColorHexagons[3] = null;
+                        sameColorHexagons[4] = null;
+                        sameColorHexagons[5] = null;
+                        sameColorHexagons[6] = null;
+                        sameColorHexagons[7] = null;
+                        sameColorHexagons[8] = null;
+
                         sellectedHexagons[0] = null;
                         sellectedHexagons[1] = null;
                         sellectedHexagons[2] = null;
